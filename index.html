@@ -128,6 +128,31 @@
       font-size: .8rem;
       color: rgba(255,255,255,.6);
     }
+
+    /* ===== BOTÓN FULLSCREEN (siempre visible, solo mouse) ===== */
+    #btn-fullscreen {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 9999;
+      padding: 8px 14px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.22);
+      color: rgba(255,255,255,.75);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: .85rem;
+      font-family: inherit;
+      transition: background .2s, color .2s;
+      user-select: none;
+      pointer-events: all;
+    }
+    #btn-fullscreen:hover { background: rgba(255,255,255,.22); color: #fff; }
+    #btn-fullscreen.active {
+      background: rgba(124,58,237,.35);
+      border-color: rgba(124,58,237,.7);
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -179,6 +204,9 @@
     <div id="profile-label"></div>
   </div>
 </div>
+
+<!-- Botón fullscreen persistente - solo accesible con mouse -->
+<button id="btn-fullscreen">⛶ Pantalla completa</button>
 
 <script>
 'use strict';
@@ -1338,6 +1366,95 @@ function makeFireFire(W, H) {
 // Teclas asignadas a Fire Fire (5 teclas)
 const FIRE_FIRE_KEYS = new Set(['3','w','f','b','8']);
 
+// ── Navi ─────────────────────────────────────────────────────
+const naviImg = new Image();
+naviImg.src = 'assets/images/navi.png';
+
+let naviAudio = null;
+
+function playNaviSound() {
+  if (!naviAudio) naviAudio = new Audio('assets/audio/navi.mp3');
+  naviAudio.pause();
+  naviAudio.currentTime = 0;
+  naviAudio.play().catch(() => {});
+}
+
+function stopNaviSound() {
+  if (naviAudio) { naviAudio.pause(); naviAudio.currentTime = 0; }
+}
+
+function makeNavi(W, H) {
+  const imgSize = Math.min(W, H) * 0.13;
+  const ratio   = (naviImg.complete && naviImg.naturalWidth > 0)
+    ? naviImg.naturalWidth / naviImg.naturalHeight : 1;
+  const imgW = imgSize * ratio;
+  const imgH = imgSize;
+  const intrusion = imgW * 0.6;          // cuánto se adentra en la pantalla
+  const margin    = imgH;
+
+  // Lado de entrada aleatorio: 0=izq, 1=der, 2=arriba, 3=abajo
+  const side = Math.floor(Math.random() * 4);
+  let cx0, cy0, cxPeak, cyPeak;          // inicio y punto visible
+
+  if (side === 0) {                      // Izquierda
+    cx0 = -imgW / 2;   cy0 = rnd(margin, H - margin);
+    cxPeak = intrusion + imgW / 2;       cyPeak = cy0;
+  } else if (side === 1) {               // Derecha
+    cx0 = W + imgW / 2; cy0 = rnd(margin, H - margin);
+    cxPeak = W - intrusion - imgW / 2;  cyPeak = cy0;
+  } else if (side === 2) {               // Arriba
+    cx0 = rnd(margin, W - margin); cy0 = -imgH / 2;
+    cxPeak = cx0; cyPeak = intrusion + imgH / 2;
+  } else {                               // Abajo
+    cx0 = rnd(margin, W - margin); cy0 = H + imgH / 2;
+    cxPeak = cx0; cyPeak = H - intrusion - imgH / 2;
+  }
+
+  const slideIn  = 0.2;
+  const hold     = 1.0;
+  const slideOut = 0.2;
+  const total    = slideIn + hold + slideOut;
+  let life = 0;
+
+  return {
+    done: false,
+    update(dt) { life += dt; if (life >= total) this.done = true; },
+    draw(ctx) {
+      let cx, cy, alpha = 1;
+
+      if (life < slideIn) {
+        const t = 1 - Math.pow(1 - life / slideIn, 3);   // ease-out
+        cx = cx0 + (cxPeak - cx0) * t;
+        cy = cy0 + (cyPeak - cy0) * t;
+      } else if (life < slideIn + hold) {
+        cx = cxPeak; cy = cyPeak;
+      } else {
+        const t = Math.pow((life - slideIn - hold) / slideOut, 3); // ease-in
+        cx = cxPeak + (cx0 - cxPeak) * t;
+        cy = cyPeak + (cy0 - cyPeak) * t;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      // Halo azul-cian característico de Navi
+      ctx.shadowBlur  = 28;
+      ctx.shadowColor = '#55eeff';
+      if (naviImg.complete && naviImg.naturalWidth > 0) {
+        ctx.drawImage(naviImg, cx - imgW / 2, cy - imgH / 2, imgW, imgH);
+      } else {
+        ctx.font = `${imgH}px serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('🧚', cx, cy);
+      }
+      ctx.restore();
+    }
+  };
+}
+
+// Teclas asignadas a Navi (5 teclas)
+const NAVI_KEYS = new Set(['4','r','a','c','7']);
+
+
 // ============================================================
 // PROFILES
 // ============================================================
@@ -1394,8 +1511,7 @@ function enterChaos(id) {
   profile = PROFILES[id];
   $profLbl.textContent = profile.name;
   effects = []; showHint = true; lastTime = null;
-  stopDolphinSound(); stopToastySound(); stopFireFireSound();
-  $select.style.display = 'none';
+  stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();  $select.style.display = 'none';
   $chaos.style.display  = 'block';
   resizeCanvas();
   if (animId) cancelAnimationFrame(animId);
@@ -1404,8 +1520,7 @@ function enterChaos(id) {
 
 function exitChaos() {
   if (animId) { cancelAnimationFrame(animId); animId = null; }
-  stopDolphinSound(); stopToastySound(); stopFireFireSound();
-  $chaos.style.display  = 'none';
+  stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();  $chaos.style.display  = 'none';
   $select.style.display = 'flex';
 }
 
@@ -1458,6 +1573,9 @@ document.addEventListener('keydown', e => {
     } else if (FIRE_FIRE_KEYS.has(keyLower)) {
       effects.push(makeFireFire(W, H));
       playFireFireSound();
+    } else if (NAVI_KEYS.has(keyLower)) {
+      effects.push(makeNavi(W, H));
+      playNaviSound();
     }
     return;
   }
@@ -1465,6 +1583,60 @@ document.addEventListener('keydown', e => {
   // ── Otros perfiles ──
   effects.push(pick(profile.effects)(W, H, e.key));
   if (SOUND_KEYS.has(keyLower)) pick(profile.sounds)();
+});
+
+// ============================================================
+// FULLSCREEN & BLOQUEO DE TECLADO
+// ============================================================
+
+// ── Bloqueo global de combinaciones (capture phase, corre antes que todo) ──
+document.addEventListener('keydown', e => {
+  // Bloquear cualquier combo con Ctrl, Alt o Cmd/Meta
+  if (e.ctrlKey || e.altKey || e.metaKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  // Bloquear todas las F-keys (F1-F12 incluye F5=reload, F11=fullscreen, F12=devtools)
+  if (/^F\d+$/.test(e.key)) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+  // Bloquear Tab globalmente (evita navegación por foco con teclado)
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true); // true = capture phase
+
+// ── Fullscreen ──
+const $btnFS = document.getElementById('btn-fullscreen');
+let lockFS           = false; // true cuando fullscreen fue activado intencionalmente
+let intentionalExit  = false; // true cuando el parent hace click en salir
+
+$btnFS.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    lockFS = true;
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    intentionalExit = true;
+    lockFS = false;
+    document.exitFullscreen();
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  const inFS = !!document.fullscreenElement;
+  $btnFS.textContent = inFS ? '⊡ Salir' : '⛶ Pantalla completa';
+  $btnFS.classList.toggle('active', inFS);
+
+  // Si salió de fullscreen sin ser intencional (ej: niño presionó Escape)
+  // → volver a entrar automáticamente
+  if (!inFS && lockFS && !intentionalExit) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+  intentionalExit = false;
 });
 </script>
 </body>
