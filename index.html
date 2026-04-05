@@ -120,21 +120,19 @@
       transition: background .2s, color .2s;
     }
     #btn-back:hover { background: rgba(255,255,255,.18); color: #fff; }
-    #profile-label {
-      padding: 7px 13px;
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.11);
-      border-radius: 10px;
-      font-size: .8rem;
-      color: rgba(255,255,255,.6);
-    }
 
-    /* ===== BOTÓN FULLSCREEN (siempre visible, solo mouse) ===== */
-    #btn-fullscreen {
+    /* ===== CONTROLES INFERIORES (fullscreen + clave) ===== */
+    #bottom-controls {
       position: fixed;
       bottom: 16px;
       right: 16px;
       z-index: 9999;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      pointer-events: all;
+    }
+    #bottom-controls button {
       padding: 8px 14px;
       background: rgba(255,255,255,.1);
       border: 1px solid rgba(255,255,255,.22);
@@ -145,14 +143,111 @@
       font-family: inherit;
       transition: background .2s, color .2s;
       user-select: none;
-      pointer-events: all;
     }
-    #btn-fullscreen:hover { background: rgba(255,255,255,.22); color: #fff; }
+    #bottom-controls button:hover { background: rgba(255,255,255,.22); color: #fff; }
     #btn-fullscreen.active {
-      background: rgba(124,58,237,.35);
-      border-color: rgba(124,58,237,.7);
-      color: #fff;
+      background: rgba(124,58,237,.35) !important;
+      border-color: rgba(124,58,237,.7) !important;
+      color: #fff !important;
     }
+
+    /* ===== BOTÓN CANDADO ===== */
+    #btn-lock {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 10001;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.25);
+      background: rgba(15,15,30,.95);
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: border-color .2s;
+    }
+    #btn-lock:hover { border-color: rgba(255,255,255,.5); }
+
+    /* ===== OVERLAY BLOQUEO ===== */
+    #lock-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: transparent;
+    }
+
+    /* ===== MODALES ===== */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10002;
+      background: rgba(0,0,0,.75);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-box {
+      background: #13131f;
+      border: 1px solid #2a2a45;
+      border-radius: 18px;
+      padding: 2rem;
+      width: min(420px, 90vw);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .modal-box h3 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+    .modal-desc   { font-size: .85rem; color: #888; margin: 0; }
+    .modal-box input[type="password"] {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0a0a15;
+      border: 1px solid #2a2a45;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .modal-box input[type="password"]:focus { border-color: #7c3aed; }
+    .modal-btns {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .modal-btns button {
+      padding: 9px 20px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      cursor: pointer;
+      font-size: .9rem;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .btn-primary {
+      background: #7c3aed;
+      color: #fff;
+      border-color: #7c3aed !important;
+    }
+    .btn-primary:hover { background: #6d28d9 !important; }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-secondary { background: #1e1e35; color: #aaa; }
+    .btn-secondary:hover { background: #2a2a45 !important; color: #fff !important; }
+    .validation-hints {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: .8rem;
+    }
+    .error-msg    { font-size: .85rem; color: #f87171; min-height: 1.2em; }
+    .attempts-msg { font-size: .8rem;  color: #fbbf24; min-height: 1.2em; }
   </style>
 </head>
 <body>
@@ -201,12 +296,67 @@
   <canvas id="chaos-canvas"></canvas>
   <div class="hud">
     <button id="btn-back">← Volver</button>
-    <div id="profile-label"></div>
   </div>
 </div>
 
-<!-- Botón fullscreen persistente - solo accesible con mouse -->
-<button id="btn-fullscreen">⛶ Pantalla completa</button>
+<!-- Controles inferiores: clave + fullscreen (siempre visibles, solo mouse) -->
+<div id="bottom-controls">
+  <button id="btn-add-password">🔑 Agregar clave</button>
+  <button id="btn-fullscreen">⛶ Pantalla completa</button>
+</div>
+
+<!-- Candado: solo visible cuando la pantalla está bloqueada -->
+<button id="btn-lock" title="Mantén presionado 3 segundos para desbloquear">🔒</button>
+
+<!-- Overlay: bloquea el mouse cuando está bloqueado -->
+<div id="lock-overlay"></div>
+
+<!-- Modal: crear clave -->
+<div id="modal-set-pw" class="modal-bg">
+  <div class="modal-box">
+    <h3>🔑 Crear clave de bloqueo</h3>
+    <p class="modal-desc">Mínimo 8 caracteres · mayúsculas · minúsculas · números.</p>
+    <input id="input-new-pw" type="password" placeholder="Nueva clave" autocomplete="off">
+    <div class="validation-hints">
+      <span id="val-length">✗ Mínimo 8 caracteres</span>
+      <span id="val-upper">✗ Una mayúscula</span>
+      <span id="val-lower">✗ Una minúscula</span>
+      <span id="val-number">✗ Un número</span>
+    </div>
+    <div class="modal-btns">
+      <button id="btn-cancel-set-pw" class="btn-secondary">Cancelar</button>
+      <button id="btn-confirm-set-pw" class="btn-primary" disabled>Bloquear 🔒</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: advertencia contraseña -->
+<div id="modal-pw-warning" class="modal-bg">
+  <div class="modal-box">
+    <h3>⚠️ ¡Importante!</h3>
+    <p class="modal-desc" style="font-size:1rem;line-height:1.6;color:#ccc;">
+      Contraseña guardada. <strong style="color:#f472b6;">Recuérdala bien</strong>,
+      porque no hay forma de recuperarla si la olvidas.<br><br>
+      ¡Capisce? 🤌
+    </p>
+    <div class="modal-btns" style="justify-content:center;">
+      <button id="btn-pw-warning-ok" class="btn-primary">Entendido, bloquear 🔒</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: desbloquear -->
+<div id="modal-unlock-pw" class="modal-bg">
+  <div class="modal-box">
+    <h3>🔓 Desbloquear pantalla</h3>
+    <input id="input-unlock-pw" type="password" placeholder="Ingresa la clave" autocomplete="off">
+    <div id="unlock-error" class="error-msg"></div>
+    <div id="unlock-attempts" class="attempts-msg"></div>
+    <div class="modal-btns">
+      <button id="btn-submit-unlock" class="btn-primary">Desbloquear</button>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -1476,7 +1626,6 @@ const $canvas  = document.getElementById('chaos-canvas');
 const ctx      = $canvas.getContext('2d');
 const $btnAct  = document.getElementById('btn-activate');
 const $btnBack = document.getElementById('btn-back');
-const $profLbl = document.getElementById('profile-label');
 
 let selId         = null;
 let profile       = null;
@@ -1509,7 +1658,6 @@ window.addEventListener('resize', () => { if ($chaos.style.display !== 'none') r
 function enterChaos(id) {
   profileId = id;
   profile = PROFILES[id];
-  $profLbl.textContent = profile.name;
   effects = []; showHint = true; lastTime = null;
   stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();  $select.style.display = 'none';
   $chaos.style.display  = 'block';
@@ -1551,6 +1699,7 @@ function loop(ts) {
 
 document.addEventListener('keydown', e => {
   if ($chaos.style.display === 'none') return;
+  if (isDialogOpen) return;  // dejar pasar el teclado a los inputs del modal
   e.preventDefault();
   if (!profile) return;
 
@@ -1584,6 +1733,178 @@ document.addEventListener('keydown', e => {
   effects.push(pick(profile.effects)(W, H, e.key));
   if (SOUND_KEYS.has(keyLower)) pick(profile.sounds)();
 });
+
+// ============================================================
+// SISTEMA DE CLAVE
+// ============================================================
+let lockedPassword = null;
+let isLocked       = false;
+let isDialogOpen   = false;
+let holdRAF        = null;
+let holdStart      = null;
+let unlockAttempts = 0;
+const HOLD_MS      = 3000;
+
+const $bottomControls  = document.getElementById('bottom-controls');
+const $btnAddPw        = document.getElementById('btn-add-password');
+const $btnLock         = document.getElementById('btn-lock');
+const $lockOverlay     = document.getElementById('lock-overlay');
+const $modalSetPw      = document.getElementById('modal-set-pw');
+const $modalUnlockPw   = document.getElementById('modal-unlock-pw');
+const $inputNewPw      = document.getElementById('input-new-pw');
+const $inputUnlockPw   = document.getElementById('input-unlock-pw');
+const $btnConfirmSetPw = document.getElementById('btn-confirm-set-pw');
+const $btnCancelSetPw  = document.getElementById('btn-cancel-set-pw');
+const $btnSubmitUnlock = document.getElementById('btn-submit-unlock');
+const $unlockError     = document.getElementById('unlock-error');
+const $unlockAttempts  = document.getElementById('unlock-attempts');
+const $valLength       = document.getElementById('val-length');
+const $valUpper        = document.getElementById('val-upper');
+const $valLower        = document.getElementById('val-lower');
+const $valNumber       = document.getElementById('val-number');
+
+function validatePw(pw) {
+  return {
+    length: pw.length >= 8,
+    upper:  /[A-Z]/.test(pw),
+    lower:  /[a-z]/.test(pw),
+    number: /[0-9]/.test(pw),
+    ok()   { return this.length && this.upper && this.lower && this.number; }
+  };
+}
+
+function setValItem(el, ok, text) {
+  el.textContent = (ok ? '✓ ' : '✗ ') + text;
+  el.style.color = ok ? '#34d399' : '#666';
+}
+
+function openModal(el)  { el.style.display = 'flex'; isDialogOpen = true; }
+function closeModal(el) { el.style.display = 'none'; isDialogOpen = false; }
+
+// ── Abrir modal de crear clave ──
+$btnAddPw.addEventListener('click', () => {
+  $inputNewPw.value = '';
+  $btnConfirmSetPw.disabled = true;
+  ['length','upper','lower','number'].forEach(k => {
+    const labels = { length:'Mínimo 8 caracteres', upper:'Una mayúscula', lower:'Una minúscula', number:'Un número' };
+    setValItem(document.getElementById('val-'+k), false, labels[k]);
+  });
+  openModal($modalSetPw);
+  setTimeout(() => $inputNewPw.focus(), 50);
+});
+
+// Validación en tiempo real
+$inputNewPw.addEventListener('input', () => {
+  const v = validatePw($inputNewPw.value);
+  setValItem($valLength, v.length, 'Mínimo 8 caracteres');
+  setValItem($valUpper,  v.upper,  'Una mayúscula');
+  setValItem($valLower,  v.lower,  'Una minúscula');
+  setValItem($valNumber, v.number, 'Un número');
+  $btnConfirmSetPw.disabled = !v.ok();
+});
+
+$btnCancelSetPw.addEventListener('click', () => closeModal($modalSetPw));
+
+// Confirmar clave → mostrar advertencia
+let pendingPassword = null;
+const $modalPwWarning  = document.getElementById('modal-pw-warning');
+const $btnPwWarningOk  = document.getElementById('btn-pw-warning-ok');
+
+$btnConfirmSetPw.addEventListener('click', () => {
+  if (!validatePw($inputNewPw.value).ok()) return;
+  pendingPassword = $inputNewPw.value;
+  closeModal($modalSetPw);
+  openModal($modalPwWarning);
+});
+
+$btnPwWarningOk.addEventListener('click', () => {
+  lockedPassword = pendingPassword;
+  pendingPassword = null;
+  closeModal($modalPwWarning);
+  activateLock();
+});
+
+function activateLock() {
+  isLocked = true;
+  $bottomControls.style.display = 'none';
+  $btnBack.style.visibility = 'hidden';
+  $lockOverlay.style.display = 'block';
+  $btnLock.style.display = 'flex';
+}
+
+function deactivateLock() {
+  isLocked = false;
+  lockedPassword = null;
+  $lockOverlay.style.display = 'none';
+  $btnLock.style.display = 'none';
+  $btnLock.style.background = '';
+  $bottomControls.style.display = 'flex';
+  $btnBack.style.visibility = '';
+}
+
+// ── Mantener presionado el candado ──
+function startHold(e) {
+  e.preventDefault();
+  holdStart = performance.now();
+  animateHold();
+}
+function cancelHold() {
+  holdStart = null;
+  cancelAnimationFrame(holdRAF);
+  $btnLock.style.background = '';
+}
+function animateHold() {
+  if (!holdStart) return;
+  const progress = Math.min((performance.now() - holdStart) / HOLD_MS, 1);
+  const deg = progress * 360;
+  $btnLock.style.background =
+    `conic-gradient(#7c3aed ${deg}deg, rgba(15,15,30,.95) ${deg}deg)`;
+  if (progress >= 1) {
+    holdStart = null;
+    $btnLock.style.background = '';
+    openUnlockDialog();
+    return;
+  }
+  holdRAF = requestAnimationFrame(animateHold);
+}
+
+$btnLock.addEventListener('mousedown',  startHold);
+$btnLock.addEventListener('mouseup',    cancelHold);
+$btnLock.addEventListener('mouseleave', cancelHold);
+$btnLock.addEventListener('touchstart', startHold, { passive: false });
+$btnLock.addEventListener('touchend',   cancelHold);
+
+// ── Modal desbloqueo ──
+function openUnlockDialog() {
+  $inputUnlockPw.value = '';
+  $unlockError.textContent = '';
+  $unlockAttempts.textContent = '';
+  unlockAttempts = 0;
+  openModal($modalUnlockPw);
+  setTimeout(() => $inputUnlockPw.focus(), 50);
+}
+
+$btnSubmitUnlock.addEventListener('click', checkUnlock);
+$inputUnlockPw.addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkUnlock();
+});
+
+function checkUnlock() {
+  if ($inputUnlockPw.value === lockedPassword) {
+    closeModal($modalUnlockPw);
+    deactivateLock();
+  } else {
+    unlockAttempts++;
+    $inputUnlockPw.value = '';
+    if (unlockAttempts >= 3) {
+      closeModal($modalUnlockPw);  // cierra, puede reintentar
+    } else {
+      $unlockError.textContent = 'Clave incorrecta.';
+      $unlockAttempts.textContent = `Intentos restantes: ${3 - unlockAttempts}`;
+      $inputUnlockPw.focus();
+    }
+  }
+}
 
 // ============================================================
 // FULLSCREEN & BLOQUEO DE TECLADO
