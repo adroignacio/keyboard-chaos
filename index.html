@@ -120,6 +120,20 @@
       transition: background .2s, color .2s;
     }
     #btn-back:hover { background: rgba(255,255,255,.18); color: #fff; }
+    #btn-add-password {
+      display: none;
+      padding: 7px 15px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.65);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: .8rem;
+      font-family: inherit;
+      pointer-events: all;
+      transition: background .2s, color .2s;
+    }
+    #btn-add-password:hover { background: rgba(255,255,255,.18); color: #fff; }
 
     /* ===== CONTROLES INFERIORES (fullscreen + clave) ===== */
     #bottom-controls {
@@ -277,14 +291,9 @@
       <span class="card-name">Gato</span>
       <span class="card-age">&nbsp;</span>
     </div>
-    <div class="card" data-profile="perro">
-      <span class="card-emoji">🐶</span>
-      <span class="card-name">Perro</span>
-      <span class="card-age">&nbsp;</span>
-    </div>
     <div class="card" data-profile="experiment">
-      <span class="card-emoji">🧪</span>
-      <span class="card-name">Experiment</span>
+      <span class="card-emoji">🌀</span>
+      <span class="card-name">Random</span>
       <span class="card-age">&nbsp;</span>
     </div>
   </div>
@@ -296,12 +305,12 @@
   <canvas id="chaos-canvas"></canvas>
   <div class="hud">
     <button id="btn-back">← Volver</button>
+    <button id="btn-add-password">🔑 Agregar clave</button>
   </div>
 </div>
 
-<!-- Controles inferiores: clave + fullscreen (siempre visibles, solo mouse) -->
+<!-- Controles inferiores: fullscreen (siempre visible, solo mouse) -->
 <div id="bottom-controls">
-  <button id="btn-add-password">🔑 Agregar clave</button>
   <button id="btn-fullscreen">⛶ Pantalla completa</button>
 </div>
 
@@ -1659,8 +1668,10 @@ function enterChaos(id) {
   profileId = id;
   profile = PROFILES[id];
   effects = []; showHint = true; lastTime = null;
-  stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();  $select.style.display = 'none';
+  stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();
+  $select.style.display = 'none';
   $chaos.style.display  = 'block';
+  $btnAddPw.style.display = '';
   resizeCanvas();
   if (animId) cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
@@ -1668,7 +1679,9 @@ function enterChaos(id) {
 
 function exitChaos() {
   if (animId) { cancelAnimationFrame(animId); animId = null; }
-  stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();  $chaos.style.display  = 'none';
+  stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();
+  $chaos.style.display  = 'none';
+  $btnAddPw.style.display = 'none';
   $select.style.display = 'flex';
 }
 
@@ -1828,6 +1841,7 @@ function activateLock() {
   isLocked = true;
   $bottomControls.style.display = 'none';
   $btnBack.style.visibility = 'hidden';
+  $btnAddPw.style.display = 'none';
   $lockOverlay.style.display = 'block';
   $btnLock.style.display = 'flex';
 }
@@ -1840,6 +1854,7 @@ function deactivateLock() {
   $btnLock.style.background = '';
   $bottomControls.style.display = 'flex';
   $btnBack.style.visibility = '';
+  $btnAddPw.style.display = '';
 }
 
 // ── Mantener presionado el candado ──
