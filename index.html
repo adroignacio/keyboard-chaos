@@ -121,7 +121,6 @@
     }
     #btn-back:hover { background: rgba(255,255,255,.18); color: #fff; }
     #btn-add-password {
-      display: none;
       padding: 7px 15px;
       background: rgba(255,255,255,.08);
       border: 1px solid rgba(255,255,255,.15);
@@ -297,7 +296,7 @@
       <span class="card-age">&nbsp;</span>
     </div>
   </div>
-  <button id="btn-activate">¡Activar! 🚀</button>
+  <button id="btn-activate">¡Vamos!</button>
 </div>
 
 <!-- CHAOS -->
@@ -305,12 +304,12 @@
   <canvas id="chaos-canvas"></canvas>
   <div class="hud">
     <button id="btn-back">← Volver</button>
-    <button id="btn-add-password">🔑 Agregar clave</button>
   </div>
 </div>
 
-<!-- Controles inferiores: fullscreen (siempre visible, solo mouse) -->
+<!-- Controles inferiores: clave + fullscreen (solo mouse) -->
 <div id="bottom-controls">
+  <button id="btn-add-password" style="display:none">🔑 Agregar clave</button>
   <button id="btn-fullscreen">⛶ Pantalla completa</button>
 </div>
 
@@ -1671,7 +1670,7 @@ function enterChaos(id) {
   stopDolphinSound(); stopToastySound(); stopFireFireSound(); stopNaviSound();
   $select.style.display = 'none';
   $chaos.style.display  = 'block';
-  $btnAddPw.style.display = '';
+  $btnAddPw.style.display = 'inline-block';
   resizeCanvas();
   if (animId) cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
@@ -1703,7 +1702,7 @@ function loop(ts) {
     ctx.fillStyle = '#fff';
     ctx.font = `${Math.min(W/13, 54)}px system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Press any key...', W/2, H/2);
+    ctx.fillText('Presiona cualquier tecla...', W/2, H/2);
     ctx.restore();
   }
 
@@ -1854,7 +1853,7 @@ function deactivateLock() {
   $btnLock.style.background = '';
   $bottomControls.style.display = 'flex';
   $btnBack.style.visibility = '';
-  $btnAddPw.style.display = '';
+  $btnAddPw.style.display = 'inline-block';
 }
 
 // ── Mantener presionado el candado ──
