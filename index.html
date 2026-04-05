@@ -20,10 +20,10 @@
 
     /* ── DARK MODE (default) ── */
     :root, [data-theme="dark"] {
-      --bg-primary:            #004346;
+      --bg-primary:            #4D4F53;
       --bg-card:               #53284F;
-      --bg-modal:              #004346;
-      --bg-hud:                rgba(0,67,70,0.95);
+      --bg-modal:              #4D4F53;
+      --bg-hud:                rgba(77,79,83,0.95);
       --text-primary:          #FFFFFF;
       --text-secondary:        #E0E1DD;
       --text-muted:            #4D4F53;
@@ -1813,7 +1813,7 @@ function loop(ts) {
   lastTime = ts;
 
   const W = $canvas.width, H = $canvas.height;
-  ctx.fillStyle = currentTheme === 'dark' ? '#000000' : '#1a1a2e';
+  ctx.fillStyle = currentTheme === 'dark' ? '#000000' : '#FFFFFF';
   ctx.fillRect(0, 0, W, H);
 
   effects = effects.filter(e => { e.update(dt); e.draw(ctx); return !e.done; });
